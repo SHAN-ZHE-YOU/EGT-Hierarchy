@@ -13,8 +13,11 @@ The simulation operates through iterative rounds, each consisting of four distin
 $$P_{promotion} = \alpha \cdot g + (1-\alpha) \cdot h$$
 
    Where $g$ is the inequality-driven promotion probability, $h$ is the stability-driven probability, and $\alpha$ balances their influence.
+
 2. **Contribution to Common Pool:** Cooperators contribute a benefit $b$ to the common pool with a probability equal to the hierarchical score $H$. Defectors contribute nothing and retain a private benefit $c$.
+
 3. **Payoff Distribution:** Total contributions are distributed among all players based on their hierarchical levels and the defined Gini coefficient ($G$).
+
 4. **Strategy Update:** Strategy evolution follows replicator dynamics, updating the proportion of cooperators based on the average payoffs of cooperators versus defectors.
 
 ## Key Findings
