@@ -3,16 +3,25 @@
 """
 @author: Ginny Wei
 """
-
-import numpy as np
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import numpy as np
+import os
 
-# ==========================================
-# Heatmap Generators (General Population)
-# ==========================================
+def Save_plot(fig, file_name, output_format):
+    
+    dir_name = 'plots'
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+    
+    if 'png' in output_format:
+        fig.savefig(f'{dir_name}/{file_name}.png', dpi=600, format='png')
+    elif 'eps' in output_format:
+        fig.savefig(f'{dir_name}/{file_name}.eps', dpi=600, format='eps')
+    elif 'pdf' in output_format:
+        fig.savefig(f'{dir_name}/{file_name}.pdf', dpi=600, format='pdf')
 
-def Plot_aveCD_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_formats):
+def Plot_aveCD_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_format):
     x = np.array(c_set)
     y = np.array(G_set)
     X, Y = np.meshgrid(x, y)
@@ -49,15 +58,10 @@ def Plot_aveCD_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output
     im = ax.imshow(reshaped_Z, interpolation='nearest', cmap=cm.jet, extent=[0,1,0,1], vmin=0.0, vmax=0.55)
     cbar = fig.colorbar(im, ticks=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
     cbar.ax.tick_params(labelsize=16)
-    
-    if 'png' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_CD_heatmap.png', dpi=600, format='png')
-    if 'eps' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_CD_heatmap.eps', dpi=600, format='eps')
-    if 'pdf' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_CD_heatmap.pdf', dpi=600, format='pdf')
-  
-def Plot_aveStep_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_formats):
+
+    Save_plot(fig, f'n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_CD_heatmap', output_format)
+
+def Plot_aveStep_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_format):
     x = np.array(c_set)
     y = np.array(G_set)
     X, Y = np.meshgrid(x, y)
@@ -94,14 +98,9 @@ def Plot_aveStep_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, outp
     cbar = fig.colorbar(im, ticks=[0, 1, 2, 3])
     cbar.ax.tick_params(labelsize=16)
 
-    if 'png' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Step_heatmap.png', dpi=600, format='png')
-    if 'eps' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Step_heatmap.eps', dpi=600, format='eps')
-    if 'pdf' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Step_heatmap.pdf', dpi=600, format='pdf')
+    Save_plot(fig, f'n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Step_heatmap', output_format)
 
-def Plot_aveLevels_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_formats):
+def Plot_aveLevels_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_format):
     x = np.array(c_set)
     y = np.array(G_set)
     original_Z = []
@@ -132,15 +131,9 @@ def Plot_aveLevels_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, ou
     cbar = fig.colorbar(im, ticks=[2, 2.5, 3, 3.5, 4])
     cbar.ax.tick_params(labelsize=16)
 
+    Save_plot(fig, f'n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_num_levels_heatmap', output_format)
 
-    if 'png' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Levels_heatmap.png', dpi=600, format='png')
-    if 'eps' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Levels_heatmap.eps', dpi=600, format='eps')
-    if 'pdf' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Levels_heatmap.pdf', dpi=600, format='pdf')
-
-def Plot_aveEntropy_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_formats):
+def Plot_aveEntropy_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_format):
     x = np.array(c_set)
     y = np.array(G_set)
     original_Z = []
@@ -170,10 +163,5 @@ def Plot_aveEntropy_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, o
     im = ax.imshow(reshaped_Z, interpolation='nearest', cmap=cm.jet, extent=[0,1,0,1], vmin=0.0225, vmax=0.0475)
     cbar = fig.colorbar(im, ticks=[0.025, 0.03, 0.035, 0.04, 0.045])
     cbar.ax.tick_params(labelsize=16)
-
-    if 'png' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Entropy_heatmap.png', dpi=600, format='png')
-    if 'eps' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Entropy_heatmap.eps', dpi=600, format='eps')
-    if 'pdf' in output_formats:
-        plt.savefig(f'plots/n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Entropy_heatmap.pdf', dpi=600, format='pdf')
+    
+    Save_plot(fig, f'n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_entropy_heatmap', output_format)

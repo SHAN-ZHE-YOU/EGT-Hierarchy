@@ -3,15 +3,17 @@
 """
 @author: Ginny Wei
 Description: Evolutionary game theory simulation with hierarchy and Gini coefficient.
-Refactored for readability and maintainability.
 """
 
+import os
 import time
 import pickle
-import os
+import logging
 import numpy as np
+from dataclasses import dataclass, field
+from typing import List
 from scipy.stats import entropy
-from dataclasses import dataclass
+from tqdm import tqdm
 
 from hierarchy_package import (
     states, ini_levels, L_distribution, hierarchicalness, 
@@ -19,164 +21,146 @@ from hierarchy_package import (
 )
 
 @dataclass
-class SimulationConfig:
-    alpha: float = 0.5     # (g/h) ratio
-    n: int = 50           # group size (number of players)
-    test_num: int = 200     # number of simulation repetitions
-    b: float = 1.0         # benefit contributed to the common pool by cooperators
-    ini_pC: float = 0.9    # initial proportion of cooperators in the population
-    maxstep: int = 500     # maximum number of iterations (steps) for each simulation
+class SimConfig:
+    """Simulation configuration parameters"""
+    alpha: float = 0.5      # (g/h) ratio: Gini-driven vs hierarchical-stable promotion
+    n: int = 10             # Group size (total number of players)
+    test_num: int = 10     # Number of repeating times per configuration
+    b: int = 1              # Benefit magnitude contributed by a cooperator
+    ini_pC: float = 0.9     # Initial proportion of cooperators in the population
+    maxstep: int = 500      # Maximum iterations per simulation
     
-    @property
-    def initial_levels(self):
-        """Helper to generate the initial level state cleanly."""
-        return ini_levels(self.n)
+    # Keeping a benefit of magnitude c for defector [0.0, ..., 1.0]
+    c_set: List[float] = field(default_factory=lambda: list(np.linspace(0, 1, 201)))
+    # Value of Gini Coefficient [0.0, ..., 1.0] representing inequality
+    G_set: List[float] = field(default_factory=lambda: list(np.linspace(0, 1, 201)))
 
+# Configure logging to write to a file, keeping the console clean for the progress bar
+logging.basicConfig(
+    filename='simulation.log',
+    filemode='w',
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s'
+)
 
-def run_single_trial(c: float, G: float, config: SimulationConfig) -> dict:
-    """Runs a single evolutionary game simulation trial until convergence or maxstep."""
+def run_simulation(config: SimConfig):
+    data = {}
+    data['title'] = [config.n, config.alpha, config.ini_pC, config.b, config.c_set, config.G_set, config.test_num]
     
-    # --- 1. Initialization ---
-    pC = config.ini_pC
-    S_i = states(pC, config.n)
-    L_i = config.initial_levels
-    
-    # Calculate initial distribution and hierarchy
-    distr = L_distribution(L_i, S_i, config.n)
-    H = hierarchicalness(distr, config.n)
-    
-    overMaxG = 0
-    step = 1
-
-    # --- 2. Core Simulation Loop ---
-    while step <= config.maxstep:
-        # Promotion Phase
-        L_i = level_next(L_i, S_i, distr, config.n, G, H, config.alpha)
-        
-        # Update distributions based on new levels
-        distr = L_distribution(L_i, S_i, config.n)
-        H = hierarchicalness(distr, config.n)
-        
-        # Allocation Phase
-        income_i, mark, W_C, W_D = income_CD(distr, G, config.n, config.b, c, H)
-        
-        if mark == 1:
-            overMaxG += 1
-
-        # Check for Convergence (Only Cooperators or Only Defectors remain)
-        if len(set(S_i)) <= 1:
-            break
-            
-        # Preparation Phase for the next step
-        pC = pC_Next(pC, W_C, W_D)
-        S_i = states(pC, config.n)
-        
-        step += 1
-        
-    # --- 3. Return Trial Results ---
-    return {
-        'final_L_i': L_i,
-        'final_S_i': S_i,
-        'steps': step,
-        'overMaxG_ratio': overMaxG / step,
-        'entropy': entropy(L_i, config.initial_levels)
-    }
-
-
-def run_simulation_set(c: float, G: float, config: SimulationConfig) -> dict:
-    """Runs `test_num` trials for a specific (c, G) pair and aggregates the statistics."""
-    
-    # 用於儲存 test_num 次模擬的原始數據
-    L_i_all = []
-    CD_ratio_all = []
-    num_levels_all = []
-    steps_all = []
-    overMaxG_all = []
-    entropy_all = []
-
-    # 執行所有模擬
-    for _ in range(config.test_num):
-        res = run_single_trial(c, G, config)
-        
-        S_i = res['final_S_i']
-        L_i = res['final_L_i']
-        c_count = S_i.count('C')
-        cd_ratio = round(c_count / len(S_i), 4)
-        num_levels = len(set(L_i))
-        
-        # 紀錄統計數據
-        L_i_all.append(L_i)
-        CD_ratio_all.append(cd_ratio)
-        num_levels_all.append(num_levels)
-        steps_all.append(res['steps'])
-        overMaxG_all.append(res['overMaxG_ratio'])
-        entropy_all.append(res['entropy'])
-
-    # 彙整並回傳最終字典格式
-    aggregated_data = {
-        # 原始數據陣列
-        'final_L_i': L_i_all,
-        'CD_ratio': CD_ratio_all,
-        'num_levels': num_levels_all,
-        'steps': steps_all,
-        'times_overMaxG': overMaxG_all,
-        'entropy': entropy_all,
-        
-        # 計算平均值
-        'ave_step': np.mean(steps_all),
-        'ave_CD_ratio': round(np.mean(CD_ratio_all), 3),
-        'ave_num_levels': np.mean(num_levels_all),
-        'ave_overMaxG': np.mean(overMaxG_all),
-        'ave_entropy': np.mean(entropy_all),
-    }
-
-    return aggregated_data
-
-
-
-if __name__ == '__main__':
-    # Initialize Configuration
-    config = SimulationConfig()
-    
-    # Generate search space (201 steps from 0.0 to 1.0)
-    c_set = list(np.linspace(0, 1, 201))   
-    G_set = list(np.linspace(0, 1, 201))   
-
-    # Initialize the main dictionary intended for the pickle file
-    data = {
-        'title': [config.n, config.alpha, config.ini_pC, config.b, c_set, G_set, config.test_num]
-    }
+    logging.info(f"Starting simulation: n={config.n}, test_num={config.test_num}")
     
     start_time_all = time.time()
+    total_iterations = len(config.c_set) * len(config.G_set)
     
-    for c in c_set:
-        for G in G_set:
-            start_time = time.time()
-            
-            # Generate key name
-            c_b_ratio = round(c / config.b, 11)
-            name = f"n={config.n},alpha={config.alpha},ini_pC={config.ini_pC},c/b={c_b_ratio},G={G},testnum={config.test_num}"
-            print(name)
-            
-            # Execute simulation block
-            data[name] = run_simulation_set(c, G, config)
-            
-            # Print console metrics
-            res = data[name]
-            print(f"ave_step: {res['ave_step']:.2f} | ave_CD: {res['ave_CD_ratio']} | "
-                  f"ave_num_levels: {res['ave_num_levels']:.2f} | OverMaxG: {res['ave_overMaxG']:.4f}")
-            
-            # Time Tracking
-            end_time = time.time()
-            total_seconds = end_time - start_time_all 
-            hours = int(total_seconds // 3600)
-            minutes = int((total_seconds % 3600) // 60)
-            seconds = total_seconds % 60
-            
-            print(f"Execution time: {end_time - start_time:.6f} seconds | Cumulative execution time: {hours} hours {minutes} minutes {seconds:.6f} seconds\n")
+    # Progress bar wrapping the nested loops
+    with tqdm(total=total_iterations, desc="Simulating") as pbar:
+        for c in config.c_set:
+            for G in config.G_set:
+                start_time = time.time()
+                
+                # c/b ratio rounded to 11 decimal places
+                name = (f"n={config.n},alpha={config.alpha},ini_pC={config.ini_pC},"
+                        f"c/b={round(c/config.b, 11)},G={G},testnum={config.test_num}")
+                
+                data[name] = {}
+                logging.info(f"--- Running Configuration: {name} ---")
+                
+                # --- Initialize Data Storage ---
+                # General records
+                data[name]['final_L_i'] = []      
+                data[name]['CD_ratio'] = []       
+                data[name]['num_levels'] = []     
+                data[name]['times_overMaxG'] = [] 
+                data[name]['steps'] = []          
+                data[name]['entropy'] = []                    
 
-    # Save to disk
+                # --- Run Repeating Tests ---
+                for i in range(config.test_num):
+                    
+                    # Initialization
+                    step = 1
+                    overMaxG = 0 
+                    pC = config.ini_pC
+                    
+                    # Distribution setup
+                    S_i = states(config.ini_pC, config.n)
+                    L_i = ini_levels(config.n)
+                    distr = L_distribution(L_i, S_i, config.n)
+                    H = hierarchicalness(distr, config.n)
+                    
+                    # Promotion (Step 1)
+                    L_i = level_next(L_i, S_i, distr, config.n, G, H, config.alpha)
+                    distr = L_distribution(L_i, S_i, config.n)
+                    H = hierarchicalness(distr, config.n)
+                    
+                    # Allocation (Step 1)
+                    income_i, mark, W_C, W_D = income_CD(distr, G, config.n, config.b, c, H)
+                    if mark == 1:
+                        overMaxG += 1
+             
+                    # Iteration (From Step 2 to maxstep)
+                    while len(set(S_i)) > 1 and step <= config.maxstep - 1:
+                        # Update proportion
+                        pC = pC_Next(pC, W_C, W_D)
+                        
+                        # Promotion
+                        S_i = states(pC, config.n)
+                        L_i = level_next(L_i, S_i, distr, config.n, G, H, config.alpha)
+                        distr = L_distribution(L_i, S_i, config.n)
+                        H = hierarchicalness(distr, config.n)  
+                        
+                        # Allocation         
+                        income_i, mark, W_C, W_D = income_CD(distr, G, config.n, config.b, c, H)
+                        if mark == 1:
+                            overMaxG += 1
+                
+                        step += 1 
+                
+                    # --- Record Results ---
+                    data[name]['final_L_i'].append(L_i)
+                    data[name]['CD_ratio'].append(round(S_i.count('C') / len(S_i), 4))
+                    data[name]['num_levels'].append(len(list(set(L_i))))
+                    data[name]['steps'].append(step)
+                    data[name]['times_overMaxG'].append(overMaxG / step)
+                    data[name]['entropy'].append(entropy(L_i, ini_levels(config.n)))
+
+                # --- Calculate and Log Averages ---
+                data[name]['ave_overMaxG'] = np.mean(data[name]['times_overMaxG'])  
+                data[name]['ave_CD_ratio'] = round(np.mean(data[name]['CD_ratio']), 3)  
+                data[name]['ave_num_levels'] = np.mean(data[name]['num_levels'])  
+                data[name]['ave_step'] = np.mean(data[name]['steps'])  
+                data[name]['ave_entropy'] = np.mean(data[name]['entropy'])  
+
+                logging.info(
+                    f"Results -> ave_step: {data[name]['ave_step']}, "
+                    f"ave_CD: {data[name]['ave_CD_ratio']}, "
+                    f"ave_num_levels: {data[name]['ave_num_levels']}, "
+                    f"OverMaxG: {data[name]['ave_overMaxG']}"
+                )
+                
+                # Logging execution time
+                end_time = time.time()
+                total_seconds = end_time - start_time_all 
+                hours, rem = divmod(total_seconds, 3600)
+                minutes, seconds = divmod(rem, 60)
+                
+                logging.info(
+                    f"Execution time: {end_time - start_time:.6f} s | "
+                    f"Accumulated time: {int(hours)} h {int(minutes)} m {seconds:.6f} s\n"
+                )
+                
+                # Update progress bar
+                pbar.update(1)
+                
+    # --- Save Data ---
     os.makedirs('artifacts', exist_ok=True)
     filename = f'artifacts/alpha_{config.alpha}_inipC_{config.ini_pC}_201x201_CD_n_{config.n}_testnum={config.test_num}.pickle'
     with open(filename, 'wb') as file:
         pickle.dump(data, file)
+    
+    logging.info(f"Simulation completed. Data saved to {filename}")
+
+if __name__ == '__main__':
+    config = SimConfig()
+    run_simulation(config)
+    print("Simulation completed. Check 'simulation.log' for details and 'artifacts/' for results.")

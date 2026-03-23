@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
+simulation.log
+
+# Simulation Data / Artifacts
+artifacts/
+*.pickle
+
+# Generated Plots
+plots/
+*.png
+*.pdf
+*.eps
+
+# macOS specific files (since you are on a MacBook)
+.DS_Store
+.DS_Store?
+._*
+.Trashes

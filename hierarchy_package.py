@@ -2,380 +2,413 @@
 # -*- coding: utf-8 -*-
 """
 @author: Ginny Wei
-Description: Utility functions for the evolutionary game theory simulation.
-Refactored for readability, standard Python conventions, and full English documentation.
+Description: Utility functions for an evolutionary game theory simulation 
+incorporating hierarchical structures and Gini coefficient-based distributions.
 """
 
 import random
 import statistics
+import numpy as np
+from scipy.stats import entropy
 
 
-
-def states(pC: float, n: int) -> list:
+def states(pC, n):
     """
-    Generates the initial states ('C' for Cooperator, 'D' for Defector) of individuals.
+    Assigns initial states ('C' for Cooperator, 'D' for Defector) to individuals.
     
     Args:
-        pC: Proportion of cooperators.
-        n: Total number of individuals.
-    Returns:
-        A shuffled list of 'C' and 'D' states.
-    """
-    num_C = round(n * pC)
-    
-    # Create the list with exact numbers of C and D, then shuffle
-    player_states = ['C'] * num_C + ['D'] * (n - num_C)
-    random.shuffle(player_states)
-    
-    return player_states
-
-def ini_levels(n: int) -> list:
-    """
-    Initializes the hierarchy levels for all individuals to level 1.
-    """
-    return [1] * n
-
-
-def L_distribution(L_i: list, S_i: list, n: int) -> list:
-    """
-    Calculates the distribution of individuals across hierarchy levels.
-    
-    Returns:
-        A list of lists in the format: [[level, total_count, C_count, D_count], ...]
-        Sorted from the lowest level to the highest level.
-    """
-    distribution_map = {}
-    
-    # Group individuals by their current level
-    for level, state in zip(L_i, S_i):
-        if level not in distribution_map:
-            distribution_map[level] = {'total': 0, 'C': 0, 'D': 0}
-            
-        distribution_map[level]['total'] += 1
+        pC (float): Proportion of cooperators in the population.
+        n (int): Total number of individuals.
         
-        if state in ['C', 'D']:
-            distribution_map[level][state] += 1
+    Returns:
+        list: A randomly shuffled list of 'C' and 'D' states.
+    """
+    states = []
+    num_C = round(n * pC)  # Calculate the integer number of cooperators
+    
+    # Assign 'C' to the first num_C individuals, and 'D' to the rest
+    for i in range(1, n + 1):
+        if i <= num_C:
+            states.append('C')
         else:
-            raise ValueError('State must be strictly "C" or "D"')
-            
-    # Format into the required list of lists, sorted by level
-    level_distribution = []
-    for level in sorted(distribution_map.keys()):
-        counts = distribution_map[level]
-        level_distribution.append([level, counts['total'], counts['C'], counts['D']])
-        
-    return level_distribution
-
-
-def hierarchicalness(distr: list, n: int) -> float:
-    """
-    Calculates the hierarchicalness (GCR - Gini-like Coefficient of rank).
-    """
-    highest_level_count = distr[-1][1]
-    max_relative_rank = (n - highest_level_count) / (n - 1)
-
-    nodes_below = 0
-    gcr_sum = 0.0
+            states.append('D')
     
-    # Calculate GCR by iterating through levels instead of every individual (O(L) instead of O(n))
-    for level_data in distr:
-        level_count = level_data[1]
-        
-        # All individuals at this level share the same relative rank calculation
-        relative_rank_i = nodes_below / (n - 1)
-        contribution = max_relative_rank - relative_rank_i
-        
-        gcr_sum += contribution * level_count
-        nodes_below += level_count
+    # Shuffle the list to ensure a random distribution of states
+    random.shuffle(states)
+    
+    return states
 
-    return round(gcr_sum / (n - 1), 3)
-
-
-def nn_maxG(distr: list, n: int) -> float:
+def ini_levels(n):
     """
-    Calculates the maximum possible Gini Coefficient given the level distribution,
-    assuming strictly non-negative incomes.
+    Initializes the starting levels for all individuals (default level is 1).
+    """
+    Level = []
+    for i in range(n):
+        Level.append(1)
+    return Level
+
+def L_distribution(L_i, S_i, n):
+    """
+    Calculates the distribution of levels and states within the population.
+    
+    Returns:
+        list: Distribution matrix where each element is 
+              [level_value, total_individuals, C_count, D_count].
+    """
+    Level_num = []  
+    
+    sort_L = sorted(L_i)
+    sim_L = sorted(list(set(L_i))) 
+    
+    # Initialize the distribution list for each unique level
+    for k in range(len(sim_L)):
+        Level_num.append([sim_L[k], 0, 0, 0]) 
+        
+    k = 0
+    for i in range(len(L_i)):
+        # Count total individuals per level
+        if sim_L[k] == sort_L[i]:
+            Level_num[k][1] += 1 
+        else: 
+            k += 1 
+            Level_num[k][1] += 1 
+
+        # Count 'C' and 'D' states per level
+        if S_i[i] == 'C':  
+            Level_num[k][2] += 1
+        elif S_i[i] == 'D':  
+            Level_num[k][3] += 1
+        else:
+            raise ValueError('State must be "C" or "D"')
+        
+    return Level_num
+
+def hierarchicalness(distr, n):
+    """
+    Calculates the hierarchicalness (Global Reaching Centrality / GRC) of the network.
+    """
+    x = distr[-1][1]  # Number of nodes on the highest level
+    C_R_max = (n - x) / (n - 1)  # Maximum possible relative level index
+
+    howmanylower = 0  # Cumulative count of nodes at lower levels
+    GCR_terms = []
+    k = 0             # Current level index
+    num = distr[k][1] # Total nodes in the current level
+    
+    for i in range(n):
+        # Move to the next level when the current node index exceeds the current level's bounds
+        if i + 1 > num:  
+            howmanylower += distr[k][1]
+            k += 1  
+            num += distr[k][1]  
+        
+        C_R_i = howmanylower / (n - 1)  # Relative level index for the current node
+        GCR_terms.append(C_R_max - C_R_i)  # Contribution to overall hierarchicalness
+
+    H = round(sum(GCR_terms) / (n - 1), 3)
+
+    return H
+
+def nn_maxG(distr, n):
+    """
+    Calculates the maximum possible Gini Coefficient ($G$) with the given 
+    level distribution, assuming no negative incomes.
     """
     if len(distr) == 1:
-        return 0.0
-    
-    highest_level_count = distr[-1][1]
-    return round(1 - (highest_level_count / n), 3)
+        maxG = 0
+    else:
+        f_last = distr[-1][1]
+        maxG = round(1 - f_last / n, 3)
+        
+    return maxG
 
-
-def income_pool(distr: list, b: float, H: float) -> float:
+def income_pool(distr, b, H):
     """
-    Calculates the total income pool. 
-    Each Cooperator ('C') has a probability 'H' to contribute benefit 'b' to the pool.
+    Calculates the total income pool. Each 'C' has a probability $H$ 
+    to contribute benefit $b$ into the common pool.
     """
-    pool = 0.0
-    for level_data in distr:
-        num_cooperators = level_data[2]
-        for _ in range(num_cooperators):
-            if random.random() <= H:
+    pool = 0
+    for i in range(len(distr)):
+        for j in range(distr[i][2]):
+            r = random.random()
+            if r <= H:
                 pool += b
     return pool
 
-
-def twolevel_div(distr: list, G: float, n: int, pool: float) -> list:
+def twolevel_div(distr, G, n, pool):
     """
-    Divides the income pool into exactly TWO levels based on the Gini coefficient.
-    Ensures no negative incomes.
+    Divides the income pool for exactly two levels, ensuring no negative incomes.
     """
-    count_level_1 = distr[0][1]
-    count_level_2 = distr[1][1]
+    f1 = distr[0][1]
+    f2 = distr[1][1]
+    h1 = 1 - G - f2 / n
     
-    # Income proportion for the lower level based on Gini mathematics
-    h1 = 1 - G - (count_level_2 / n)
-    
-    divided_income = []
+    div_i = []
     for i in range(n):
-        if i < count_level_1:
-            divided_income.append(round(pool * h1 / count_level_1, 4))
+        if i + 1 <= f1:
+            div_i.append(round(pool * h1 / f1, 4))
         else:
-            divided_income.append(round(pool * (1 - h1) / count_level_2, 4))
-            
-    return divided_income
+            div_i.append(round(pool * (1 - h1) / f2, 4))
+    return div_i
 
-
-def G_LCarea(X: list, Y: list, pool: float) -> float:
+def G_LCarea(X, Y, pool): 
     """
-    Calculates the Gini coefficient using the Lorenz Curve area check.
-    Uses numerical trapezoidal/rectangular approximation.
+    Calculates the area under the Lorenz Curve (area 'B') to check the Gini coefficient.
+    Used when the number of levels >= 3.
     """
     subarea = []
     for i in range(len(Y) - 1):
         subarea.append((Y[i] / pool) * (X[i+1] - X[i]))
         subarea.append((Y[i] / pool) * (X[i+2] - X[i+1]))
-        
     subarea.append((Y[-1] / pool) * (X[-1] - X[-2]))
+    
     return 1 - sum(subarea)
 
-
-def find_para(upper_a: float, lower_a: float, xdata: list, distr: list, G: float, pool: float, n: int):
+def find_para(upper_a, lower_a, xdata, distr, G, pool, n):
     """
-    Uses binary search to find the parabola exponent 'a' that fits the target Gini coefficient.
+    Numerical division into 3 or more levels using a parabola fit approach.
+    Iteratively finds the exponent 'a' that satisfies the target Gini coefficient.
     """
     if pool == 0:
-        return -1, -1, [0.0] * n
-
-    iteration = 1
-    tolerance = 0.0001
-    
-    best_error = float('inf')
-    best_a = None
-    best_G = None
-    best_div_income = None
-    
-    while iteration <= 2000:
-        # Relax tolerance after 1000 iterations to force convergence
-        if iteration > 1000:
-            tolerance = 0.001
-            
-        guess_a = (upper_a + lower_a) / 2
+        guess_a = -1
+        guess_G = -1
         div_income = []
-        cumu_income = []
+        for i in range(n):
+            div_income.append(0) 
+    else:
+        err = 1
+        ii = 1
+        tolerance = 0.0001
         
-        # Calculate income distributions with the guessed exponent
-        for i, level_data in enumerate(distr):
-            level_count = level_data[1]
-            cumu_val = round((xdata[i+1] ** guess_a) * pool, 5)
-            cumu_income.append(cumu_val)
-            
-            level_income_share = ((xdata[i+1] ** guess_a) - (xdata[i] ** guess_a)) * pool
-            individual_income = round(level_income_share / level_count, 5)
-            div_income.extend([individual_income] * level_count)
-            
-        guess_G = G_LCarea(xdata, cumu_income, pool)
-        error = G - guess_G
+        # Track the best solution (minimum error)
+        best_err = float('inf')
+        best_a = None
+        best_G = None
+        best_div_income = None
         
-        # Track the best approximation found so far
-        if abs(error) < best_error:
-            best_error = abs(error)
-            best_a = guess_a
-            best_G = guess_G
-            best_div_income = div_income.copy()
+        while ii <= 2000:
+            # Dynamically adjust tolerance
+            if ii > 1000:
+                tolerance = 0.001
             
-        if abs(error) <= tolerance:
-            break
+            # Check for convergence
+            if abs(err) <= tolerance:
+                break
+                
+            guess_a = (upper_a + lower_a) / 2
+            div_income = []
+            cumu_income = []
             
-        # Adjust binary search bounds
-        if error > 0:
-            lower_a = guess_a
-        elif error < 0:
-            upper_a = guess_a
+            for i in range(len(distr)):
+                cumu_income.append(round((xdata[i+1]**guess_a) * pool, 5))
+                for j in range(distr[i][1]):
+                    div_income.append(round((xdata[i+1]**guess_a - xdata[i]**guess_a) * pool / distr[i][1], 5))
+                    
+            guess_G = G_LCarea(xdata, cumu_income, pool) 
+            err = G - guess_G
             
-        iteration += 1
+            # Update best solution
+            if abs(err) < best_err:
+                best_err = abs(err)
+                best_a = guess_a
+                best_G = guess_G
+                best_div_income = div_income.copy()
+            
+            # Adjust search boundaries
+            if err > 0:
+                lower_a = guess_a
+            elif err < 0:
+                upper_a = guess_a
+            
+            if ii > 1000:
+                print('-----', ii, '-----', G, '-----', f'tolerance: {tolerance}, best_err: {best_err:.6f}')
+            
+            ii = ii + 1
         
-    # Failsafe if mathematical convergence wasn't reached
-    if iteration > 2000:
-        print(f'WARNING: Parameters (G={G}) did not converge after 2000 iterations. Using best result (error={best_error:.6f})')
-        return best_a, best_G, best_div_income
+        # Fallback to the best solution if max iterations reached without strict convergence
+        if ii > 2000:
+            print(f'WARNING: Parameter combination G={G} did not converge after 2000 iterations. Using the best solution (error={best_err:.6f})')
+            guess_a = best_a
+            guess_G = best_G
+            div_income = best_div_income
 
     return guess_a, guess_G, div_income
 
-
-def parabola_div(distr: list, G: float, n: int, pool: float) -> list:
+def parabola_div(distr, G, n, pool):  
     """
-    Divides the pool into 3 or more levels using a parabolic fit approach (y = x^a).
+    Divides the pool into 3 or more levels by fitting a power-law curve ($y = x^a$).
     """
     xdata = [0]
-    accumulated_x = 0
+    accumulate_x = 0
     
-    for level_data in distr:
-        accumulated_x += level_data[1]
-        xdata.append(round(accumulated_x / n, 3))
+    for i in range(len(distr)):
+        xdata.append(round((distr[i][1] + accumulate_x) / n, 3))
+        accumulate_x = accumulate_x + distr[i][1]
     
-    upper_bound = 5000
-    lower_bound = 1
-    sol_a, sol_G, div_income = find_para(upper_bound, lower_bound, xdata, distr, G, pool, n)
+    upper_a = 5000
+    lower_a = 1
+    
+    findpara = find_para(upper_a, lower_a, xdata, distr, G, pool, n)
+    div_income = findpara[2]
     
     return div_income
 
-
-def div_pool(distr: list, G: float, n: int, b: float, c: float, H: float):
+def div_pool(distr, G, n, b, c, H):
     """
-    Determines how the pool is divided among individuals based on the Gini Coefficient.
-    Returns the divided incomes and a 'mark' (status flag for Gini ceiling).
+    Allocates individual income based on the targeted Gini coefficient.
+    
+    Returns:
+        tuple: (divpool_i, mark) where mark indicates adjustments made to G.
     """
     pool = income_pool(distr, b, H)
-    max_G = nn_maxG(distr, n)
+    MaxG = nn_maxG(distr, n)
     
-    divided_pool = []
+    divpool_i = []
     
-    if len(distr) == 1 or G == 0:
-        # If only 1 level exists, or Gini is 0, distribute perfectly evenly
-        divided_pool = [round(pool / n, 4)] * n
-        mark = 2  # Status 2: Even distribution triggered
+    if len(distr) == 1: 
+        # Only 1 level exists -> evenly divide the pool
+        for i in range(n):
+            divpool_i.append(round(pool / n, 4))
+        mark = 2
+    
+    elif G == 0: 
+        # G=0 -> evenly divide the pool
+        for i in range(n):
+            divpool_i.append(round(pool / n, 4))
+        mark = 2
         
     else:
-        if G > max_G:
-            G_input = max_G
-            mark = 1  # Status 1: Requested G exceeds maximum possible, capped at max_G
+        if G > MaxG:
+            G_input = MaxG * 1
+            mark = 1  # 1 indicates G was capped at MaxG
         else:
             G_input = G
-            mark = 0  # Status 0: Normal operation
+            mark = 0  # 0 indicates original G was used
         
         if len(distr) == 2:
-            divided_pool = twolevel_div(distr, G_input, n, pool)
+            divpool_i = twolevel_div(distr, G_input, n, pool)
         else:
-            divided_pool = parabola_div(distr, G_input, n, pool)
+            divpool_i = parabola_div(distr, G_input, n, pool)
 
-    return divided_pool, mark
+    return divpool_i, mark
 
-
-def income_CD(distr: list, G: float, n: int, b: float, c: float, H: float):
+def income_CD(distr, G, n, b, c, H):
     """
-    Calculates final individual incomes, applying the benefit 'b' and defector retention 'c'.
+    Calculates final incomes considering 'C' contributions and 'D' retentions.
+    Defectors ('D') keep magnitude 'c' for themselves.
     """
-    divided_pool, mark = div_pool(distr, G, n, b, c, H)
+    div = div_pool(distr, G, n, b, c, H)
+    divpool_i = div[0]
+    mark = div[1]
     
     income_i = []
-    sum_C = 0.0
-    sum_D = 0.0
-    count_C = 0
-    count_D = 0
+    num = 0
+    sumC = 0
+    sumD = 0
+    nC = 0
+    nD = 0
     
-    index = 0
-    for level_data in distr:
-        num_C_in_level = level_data[2]
-        num_D_in_level = level_data[3]
-        
-        # Allocate income to Cooperators
-        for _ in range(num_C_in_level):
-            base_income = divided_pool[index]
-            income_i.append(base_income)
-            sum_C += base_income
-            count_C += 1
-            index += 1
+    for i in range(len(distr)):
+        for j in range(distr[i][2]):  # Process 'C' individuals
+            income_i.append(divpool_i[num])
+            sumC = sumC + divpool_i[num]
+            nC += 1
+            num += 1
             
-        # Allocate income to Defectors (they keep 'c' for themselves)
-        for _ in range(num_D_in_level):
-            base_income = divided_pool[index] + c
-            income_i.append(base_income)
-            sum_D += base_income
-            count_D += 1
-            index += 1
-            
-    # Calculate average wealth for Cooperators and Defectors
-    W_C = round(sum_C / count_C, 4) if count_C > 0 else 0.0
-    W_D = round(sum_D / count_D, 4) if count_D > 0 else 0.0
+        for k in range(distr[i][3]):  # Process 'D' individuals
+            income_i.append(divpool_i[num] + c)
+            sumD = sumD + (divpool_i[num] + c)
+            nD += 1
+            num += 1
+    
+    W_C = round(sumC / nC, 4) if nC > 0 else 0
+    W_D = round(sumD / nD, 4) if nD > 0 else 0
     
     return income_i, mark, W_C, W_D
 
-
-def pC_Next(pC: float, W_C: float, W_D: float) -> float:
+def pC_Next(pC, W_C, W_D): 
     """
-    Calculates the proportion of Cooperators for the next iteration step.
-    Formula: (pC * W_C) / ((pC * W_C) + (pD * W_D))
+    Calculates the proportion of Cooperators for the next iteration using replicator dynamics.
+    Equation: $W(C) / (W(C) + W(D))$
     """
     pD = 1 - pC
     if W_C == 0 and W_D == 0:
-        return 0.0
-    return round((pC * W_C) / ((pC * W_C) + (pD * W_D)), 4)
+        return 0
+    else:
+        return round((pC * W_C) / ((pC * W_C) + (pD * W_D)), 4)
 
-
-def gh(n: int, G: float, H: float, L_i: list):
+def gh(n, G, H, L_i):
     """
-    Calculates the promotion probabilities for individuals.
-    'h': Probability related to hierarchicalness
-    'g': Probability related to the Gini coefficient
-    """
-    h_probabilities = []
-    g_probabilities = []
+    Calculates promotion probabilities based on hierarchy and inequality.
     
-    # Calculate PR values to gauge relative standing in the hierarchy
-    sigma = statistics.stdev(L_i) if len(L_i) > 1 else 0
-    ave_L = sum(L_i) / len(L_i)
-    range_PR = 3
+    Args:
+        h (list): Probability of promotion related to hierarchicalness.
+        g (list): Probability of promotion related to Gini coefficient.
+    """
+    h_i = []                                
+    g_i = []                             
+    pPR = []                                
+    
+    # Calculate performance relative to the population (pseudo-PR value)
+    sigma = statistics.stdev(L_i)  # Standard deviation
+    ave_L = sum(L_i) / len(L_i)    # Mean
+    range_PR = 3                   # Setting boundary bounds
     
     for i in range(n):
         if sigma == 0:
-            pseudo_PR = 0.0
+            psuedo_PR = 0
         else:
-            pseudo_PR = (L_i[i] - ave_L) / sigma
+            psuedo_PR = (L_i[i] - ave_L) / sigma
 
-        # Clamp the pseudo_PR value between -3 and 3
-        pseudo_PR = max(min(pseudo_PR, range_PR), -range_PR)
+        # Clamp pseudo_PR to bounds [-3, 3]
+        if psuedo_PR >= range_PR: 
+            psuedo_PR = range_PR
+        elif psuedo_PR <= -range_PR: 
+            psuedo_PR = -range_PR
             
-        # Calculate 'h' (Probability related to hierarchy)
-        h_x0 = 0.5 - (pseudo_PR / range_PR) * 0.5
-        h_value = h_x0 * (1 - H * 0.9)  # Prevents h from hitting zero when H=1
-        h_probabilities.append(h_value)
+        pPR.append(psuedo_PR)
+            
+        # Calculate h value (Linear mapping: Ax+By+C = 0)
+        h_x0 = 0.5 - (psuedo_PR / range_PR) * 0.5
+        h_value = h_x0 * (1 - H * 0.9)  # Give some chances even when H=1
+        h_i.append(h_value)
         
-        # Calculate 'g' (Probability related to Gini)
-        g_x1 = 0.5 - (pseudo_PR / range_PR) * 0.5
+        # Calculate g value (Linear mapping: Ax+By+C = 0)
+        g_x1 = 0.5 - (psuedo_PR / range_PR) * 0.5
         g_value = g_x1 * G
-        g_probabilities.append(g_value)
+        g_i.append(g_value)
         
-    return h_probabilities, g_probabilities
+    return h_i, g_i
 
-
-def level_next(L_i: list, S_i: list, distr: list, n: int, G: float, H: float, alpha: float) -> list:
+def level_next(L_i, S_i, distr, n, G, H, alpha):
     """
-    Determines the hierarchy levels of individuals for the next step.
-    Cooperants have a chance to be promoted, Defectors are never promoted.
+    Determines the next level for all individuals based on their state and promotion odds.
     """
     L_next = []
     
-    h_probs, g_probs = gh(n, G, H, L_i)
+    # Fetch promotion probabilities
+    g_and_h = gh(n, G, H, L_i) 
+    h = g_and_h[0]  # Hierarchy-related promotion
+    g = g_and_h[1]  # Gini-related promotion
     
     for i in range(n):
-        # Generate the probability of promotion
-        if len(distr) == 1:
-            promotion_prob = 1 / n
+        # Determine base probability of promotion
+        if len(distr) == 1: 
+            # All nodes are on the same level
+            pp = 1 / n 
         else:
-            # Alpha controls the weight between Gini-driven and Hierarchy-driven promotion
-            promotion_prob = (alpha * g_probs[i]) + ((1 - alpha) * h_probs[i])
+            # Combination of g and h ($0 \le pp \le 1$)
+            pp = alpha * g[i] + (1 - alpha) * h[i] 
     
-        # Roll the dice for promotion
-        if S_i[i] == 'C': 
-            if random.random() < promotion_prob:
-                L_next.append(L_i[i] + 1)  # Promoted
+        # Roll the die to decide promotion
+        if S_i[i] == 'C':  
+            r = random.random()
+            if r < pp:
+                L_next.append(L_i[i] + 1)  # C gets promoted
             else:
-                L_next.append(L_i[i])      # Not promoted
+                L_next.append(L_i[i])      # C doesn't get promoted
         else:  
-            # Defectors ('D') do not get promoted
-            L_next.append(L_i[i])
+            # D never gets promoted
+            L_next.append(L_i[i]) 
 
     return L_next
