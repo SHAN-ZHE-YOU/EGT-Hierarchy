@@ -30,7 +30,7 @@ The simulation explores the parameter space of the Gini coefficient ($G$) and th
 **1. Install Dependencies**
 Ensure you have Python 3 installed, then install the required scientific libraries:
 ```bash
-pip install numpy scipy matplotlib
+pip install numpy scipy matplotlib tqdm
 ```
 
 **2. Run the Simulation**
