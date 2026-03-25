@@ -25,7 +25,7 @@ class SimConfig:
     """Simulation configuration parameters"""
     alpha: float = 0.5      # (g/h) ratio: Gini-driven vs hierarchical-stable promotion
     n: int = 10             # Group size (total number of players)
-    test_num: int = 10     # Number of repeating times per configuration
+    test_num: int = 200     # Number of repeating times per configuration
     b: int = 1              # Benefit magnitude contributed by a cooperator
     ini_pC: float = 0.9     # Initial proportion of cooperators in the population
     maxstep: int = 500      # Maximum iterations per simulation
@@ -162,5 +162,6 @@ def run_simulation(config: SimConfig):
 
 if __name__ == '__main__':
     config = SimConfig()
+    print(f"Starting simulation with parameters: n={config.n}, alpha={config.alpha}, ini_pC={config.ini_pC}, test_num={config.test_num}")
     run_simulation(config)
     print("Simulation completed. Check 'simulation.log' for details and 'artifacts/' for results.")
