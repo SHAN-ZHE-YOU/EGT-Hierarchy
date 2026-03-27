@@ -30,23 +30,71 @@ The simulation explores the parameter space of the Gini coefficient ($G$) and th
 
 ## Quick Start
 
-**1. Install Dependencies**
-Ensure you have Python 3 installed, then install the required scientific libraries:
+### 1. Create Virtual Environment (recommended)
 ```bash
-pip install numpy scipy matplotlib tqdm
+python3 -m venv env
+source env/bin/activate  # macOS / Linux
+````
+
+### 2. Install Dependencies
+
+**Reproducible setup (recommended):**
+
+```bash
+pip3 install -r requirements.txt
 ```
 
-**2. Run the Simulation**
-Execute the main script to start the evolutionary simulation. The output will be saved as a `.pickle` file in the `artifacts/` directory.
+**Quick install (alternative):**
+
 ```bash
-python hierarchy_main.py
+pip3 install numpy scipy matplotlib tqdm
 ```
 
-**3. Generate Plots**
-Use the plotting script to generate heatmaps for average cooperation, hierarchy levels, steps, and entropy. Replace `<filename>` with your generated data file.
+---
+
+### 3. Run the Simulation
+
+Execute the main script to start the evolutionary simulation.
+The output will be saved as a `.pickle` file in the `artifacts/` directory.
+
 ```bash
-python hierarchy_plot.py -f artifacts/<filename>.pickle -t all
+python3 hierarchy_main.py
 ```
+
+---
+
+### 4. Generate Plots
+
+Use the plotting script to generate heatmaps for:
+
+* average cooperation
+* hierarchy levels
+* steps
+* entropy
+
+Replace `<filename>` with your generated data file.
+
+```bash
+python3 hierarchy_plot.py -f artifacts/<filename>.pickle -t all
+```
+
+---
+
+### Project Structure
+
+```
+.
+├── hierarchy_main.py
+├── hierarchy_package.py
+├── hierarchy_plot.py
+├── hierarchy_plot_package.py
+├── requirements.txt
+├── artifacts/        # simulation outputs (.pickle)
+└── results/          # generated plots (optional)
+```
+
+
+
 
 ## Citation
 If you use this code or model in your research, please cite our paper:
