@@ -10,7 +10,8 @@ The simulation operates through iterative rounds, each consisting of four distin
 
 1. **Hierarchical Promotion:** Cooperators have the opportunity to advance to the next hierarchical level. Defectors cannot be promoted. The promotion probability is governed by inequality (Gini coefficient) and structural stability (Hierarchical score):
 
-$$P_{promotion} = \alpha \cdot g + (1-\alpha) \cdot h$$
+   $$P_{promotion} = \alpha \cdot g + (1-\alpha) \cdot h$$
+   
    Where $g$ is the inequality-driven promotion probability, $h$ is the stability-driven probability, and $\alpha$ balances their influence.
 
 2. **Contribution to Common Pool:** Cooperators contribute a benefit $b$ to the common pool with a probability equal to the hierarchical score $H$. Defectors contribute nothing and retain a private benefit $c$.
