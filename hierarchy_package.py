@@ -122,18 +122,18 @@ def nn_maxG(distr, n):
         
     return maxG
 
-def income_pool(distr, b, H):
-    """
-    Calculates the total income pool. Each 'C' has a probability $H$ 
-    to contribute benefit $b$ into the common pool.
-    """
-    pool = 0
-    for i in range(len(distr)):
-        for j in range(distr[i][2]):
-            r = random.random()
-            if r <= H:
-                pool += b
-    return pool
+# def income_pool(distr, b, H):
+#     """
+#     Calculates the total income pool. Each 'C' has a probability $H$ 
+#     to contribute benefit $b$ into the common pool.
+#     """
+#     pool = 0
+#     for i in range(len(distr)):
+#         for j in range(distr[i][2]):
+#             r = random.random()
+#             if r <= H:
+#                 pool += b
+#     return pool
 
 def twolevel_div(distr, G, n, pool):
     """
@@ -253,78 +253,78 @@ def parabola_div(distr, G, n, pool):
     
     return div_income
 
-def div_pool(distr, G, n, b, c, H):
-    """
-    Allocates individual income based on the targeted Gini coefficient.
+# def div_pool(distr, G, n, b, c, H):
+#     """
+#     Allocates individual income based on the targeted Gini coefficient.
     
-    Returns:
-        tuple: (divpool_i, mark) where mark indicates adjustments made to G.
-    """
-    pool = income_pool(distr, b, H)
-    MaxG = nn_maxG(distr, n)
+#     Returns:
+#         tuple: (divpool_i, mark) where mark indicates adjustments made to G.
+#     """
+#     pool = income_pool(distr, b, H)
+#     MaxG = nn_maxG(distr, n)
     
-    divpool_i = []
+#     divpool_i = []
     
-    if len(distr) == 1: 
-        # Only 1 level exists -> evenly divide the pool
-        for i in range(n):
-            divpool_i.append(round(pool / n, 4))
-        mark = 2
+#     if len(distr) == 1: 
+#         # Only 1 level exists -> evenly divide the pool
+#         for i in range(n):
+#             divpool_i.append(round(pool / n, 4))
+#         mark = 2
     
-    elif G == 0: 
-        # G=0 -> evenly divide the pool
-        for i in range(n):
-            divpool_i.append(round(pool / n, 4))
-        mark = 2
+#     elif G == 0: 
+#         # G=0 -> evenly divide the pool
+#         for i in range(n):
+#             divpool_i.append(round(pool / n, 4))
+#         mark = 2
         
-    else:
-        if G > MaxG:
-            G_input = MaxG * 1
-            mark = 1  # 1 indicates G was capped at MaxG
-        else:
-            G_input = G
-            mark = 0  # 0 indicates original G was used
+#     else:
+#         if G > MaxG:
+#             G_input = MaxG * 1
+#             mark = 1  # 1 indicates G was capped at MaxG
+#         else:
+#             G_input = G
+#             mark = 0  # 0 indicates original G was used
         
-        if len(distr) == 2:
-            divpool_i = twolevel_div(distr, G_input, n, pool)
-        else:
-            divpool_i = parabola_div(distr, G_input, n, pool)
+#         if len(distr) == 2:
+#             divpool_i = twolevel_div(distr, G_input, n, pool)
+#         else:
+#             divpool_i = parabola_div(distr, G_input, n, pool)
 
-    return divpool_i, mark
+#     return divpool_i, mark
 
-def income_CD(distr, G, n, b, c, H):
-    """
-    Calculates final incomes considering 'C' contributions and 'D' retentions.
-    Defectors ('D') keep magnitude 'c' for themselves.
-    """
-    div = div_pool(distr, G, n, b, c, H)
-    divpool_i = div[0]
-    mark = div[1]
+# def income_CD(distr, G, n, b, c, H):
+#     """
+#     Calculates final incomes considering 'C' contributions and 'D' retentions.
+#     Defectors ('D') keep magnitude 'c' for themselves.
+#     """
+#     div = div_pool(distr, G, n, b, c, H)
+#     divpool_i = div[0]
+#     mark = div[1]
     
-    income_i = []
-    num = 0
-    sumC = 0
-    sumD = 0
-    nC = 0
-    nD = 0
+#     income_i = []
+#     num = 0
+#     sumC = 0
+#     sumD = 0
+#     nC = 0
+#     nD = 0
     
-    for i in range(len(distr)):
-        for j in range(distr[i][2]):  # Process 'C' individuals
-            income_i.append(divpool_i[num])
-            sumC = sumC + divpool_i[num]
-            nC += 1
-            num += 1
+#     for i in range(len(distr)):
+#         for j in range(distr[i][2]):  # Process 'C' individuals
+#             income_i.append(divpool_i[num])
+#             sumC = sumC + divpool_i[num]
+#             nC += 1
+#             num += 1
             
-        for k in range(distr[i][3]):  # Process 'D' individuals
-            income_i.append(divpool_i[num] + c)
-            sumD = sumD + (divpool_i[num] + c)
-            nD += 1
-            num += 1
+#         for k in range(distr[i][3]):  # Process 'D' individuals
+#             income_i.append(divpool_i[num] + c)
+#             sumD = sumD + (divpool_i[num] + c)
+#             nD += 1
+#             num += 1
     
-    W_C = round(sumC / nC, 4) if nC > 0 else 0
-    W_D = round(sumD / nD, 4) if nD > 0 else 0
+#     W_C = round(sumC / nC, 4) if nC > 0 else 0
+#     W_D = round(sumD / nD, 4) if nD > 0 else 0
     
-    return income_i, mark, W_C, W_D
+#     return income_i, mark, W_C, W_D
 
 def pC_Next(pC, W_C, W_D): 
     """
@@ -337,78 +337,249 @@ def pC_Next(pC, W_C, W_D):
     else:
         return round((pC * W_C) / ((pC * W_C) + (pD * W_D)), 4)
 
-def gh(n, G, H, L_i):
-    """
-    Calculates promotion probabilities based on hierarchy and inequality.
+# def gh(n, G, H, L_i):
+#     """
+#     Calculates promotion probabilities based on hierarchy and inequality.
     
-    Args:
-        h (list): Probability of promotion related to hierarchicalness.
-        g (list): Probability of promotion related to Gini coefficient.
+#     Args:
+#         h (list): Probability of promotion related to hierarchicalness.
+#         g (list): Probability of promotion related to Gini coefficient.
+#     """
+#     h_i = []                                
+#     g_i = []                             
+#     pPR = []                                
+    
+#     # Calculate performance relative to the population (pseudo-PR value)
+#     sigma = statistics.stdev(L_i)  # Standard deviation
+#     ave_L = sum(L_i) / len(L_i)    # Mean
+#     range_PR = 3                   # Setting boundary bounds
+    
+#     for i in range(n):
+#         if sigma == 0:
+#             psuedo_PR = 0
+#         else:
+#             psuedo_PR = (L_i[i] - ave_L) / sigma
+
+#         # Clamp pseudo_PR to bounds [-3, 3]
+#         if psuedo_PR >= range_PR: 
+#             psuedo_PR = range_PR
+#         elif psuedo_PR <= -range_PR: 
+#             psuedo_PR = -range_PR
+            
+#         pPR.append(psuedo_PR)
+            
+#         # Calculate h value (Linear mapping: Ax+By+C = 0)
+#         h_x0 = 0.5 - (psuedo_PR / range_PR) * 0.5
+#         h_value = h_x0 * (1 - H * 0.9)  # Give some chances even when H=1
+#         h_i.append(h_value)
+        
+#         # Calculate g value (Linear mapping: Ax+By+C = 0)
+#         g_x1 = 0.5 - (psuedo_PR / range_PR) * 0.5
+#         g_value = g_x1 * G
+#         g_i.append(g_value)
+        
+#     return h_i, g_i
+
+# def level_next(L_i, S_i, distr, n, G, H, alpha):
+#     """
+#     Determines the next level for all individuals based on their state and promotion odds.
+#     """
+#     L_next = []
+    
+#     # Fetch promotion probabilities
+#     g_and_h = gh(n, G, H, L_i) 
+#     h = g_and_h[0]  # Hierarchy-related promotion
+#     g = g_and_h[1]  # Gini-related promotion
+    
+#     for i in range(n):
+#         # Determine base probability of promotion
+#         if len(distr) == 1: 
+#             # All nodes are on the same level
+#             pp = 1 / n 
+#         else:
+#             # Combination of g and h ($0 \le pp \le 1$)
+#             pp = alpha * g[i] + (1 - alpha) * h[i] 
+    
+#         # Roll the die to decide promotion
+#         if S_i[i] == 'C':  
+#             r = random.random()
+#             if r < pp:
+#                 L_next.append(L_i[i] + 1)  # C gets promoted
+#             else:
+#                 L_next.append(L_i[i])      # C doesn't get promoted
+#         else:  
+#             # D never gets promoted
+#             L_next.append(L_i[i]) 
+
+#     return L_next
+
+
+# ... 保留原有的 states, ini_levels, L_distribution, hierarchicalness, nn_maxG, twolevel_div, G_LCarea, find_para, parabola_div ...
+
+# 幫每個人算出「全場有百分之多少的人等級比我低」。
+def get_CR(L_i, n):
+    """
+    計算每個人的 CR(i)：層級嚴格低於 i 的人口比例。
+    """
+    CR_i = []
+    for val in L_i:
+        lower_count = sum(1 for x in L_i if x < val)
+        CR_i.append(lower_count / n)
+    return CR_i
+
+# 把你跟隊友貢獻的錢加總後，乘以 $r$（比如兩倍），這就是大家等一下要分的錢。
+def income_pool(distr, b, H, r=2.0):
+    """
+    加入 synergy factor r (預設為 2.0)。
+    Pool = r * b * (實際貢獻人數)
+    """
+    actual_contributors = 0
+    for i in range(len(distr)):
+        for j in range(distr[i][2]):
+            rand_val = random.random()
+            if rand_val <= H:
+                actual_contributors += 1
+    pool = r * b * actual_contributors
+    return pool
+
+# 將 r 傳遞給 income_pool。
+def div_pool(distr, G, n, b, c, H, r=2.0):
+    """
+    分配總資源，將 r 傳遞給 income_pool。
+    """
+    pool = income_pool(distr, b, H, r)
+    MaxG = nn_maxG(distr, n)
+    divpool_i = []
+    
+    if len(distr) == 1 or G == 0: 
+        for i in range(n):
+            divpool_i.append(round(pool / n, 4))
+        mark = 2
+    else:
+        if G > MaxG:
+            G_input = MaxG * 1
+            mark = 1 
+        else:
+            G_input = G
+            mark = 0 
+        
+        if len(distr) == 2:
+            divpool_i = twolevel_div(distr, G_input, n, pool)
+        else:
+            divpool_i = parabola_div(distr, G_input, n, pool)
+    return divpool_i, mark
+
+
+def income_CD(distr, G, n, b, c, H, r=2.0):
+    """
+    計算最終收入。記錄每個個體的確切收入以便進行個體層級更新。
+    """
+    div = div_pool(distr, G, n, b, c, H, r)
+    divpool_i = div[0]
+    mark = div[1]
+    
+    income_i = [0] * n
+    # 分配 payoff 到對應個體 (為了維持原本順序，這裡採用簡單的依序指派)
+    # 注意：這裡假設 L_i 的排序與 distr 產生的過程一致，為了個體化更新，
+    # 建議在主程式傳入完整的 L_i 與 S_i 直接計算。這裡提供給 Fermi update 使用的回傳。
+    
+    num = 0
+    sumC, sumD = 0, 0
+    nC, nD = 0, 0
+    
+    # 這裡將收入分配回對應策略，但個體更新需要個別 \pi_i。
+    # 稍微重構以回傳個體收入列表：
+    for i in range(len(distr)):
+        for j in range(distr[i][2]):  # 'C'
+            income_i[num] = divpool_i[num]
+            sumC += divpool_i[num]
+            nC += 1
+            num += 1
+            
+        for k in range(distr[i][3]):  # 'D'
+            income_i[num] = divpool_i[num] + c
+            sumD += (divpool_i[num] + c)
+            nD += 1
+            num += 1
+            
+    W_C = round(sumC / nC, 4) if nC > 0 else 0
+    W_D = round(sumD / nD, 4) if nD > 0 else 0
+    
+    return income_i, mark, W_C, W_D
+
+# 把原本很複雜的數學，改成直接用剛剛算出的排名（CR）來決定你升官的機率權重。
+def gh(n, G, H, CR_i):
+    """
+    將相對位置改用 rank：把 (1 − \sigma_i/3)/2 換成 (1 − CR(i))。
     """
     h_i = []                                
     g_i = []                             
-    pPR = []                                
-    
-    # Calculate performance relative to the population (pseudo-PR value)
-    sigma = statistics.stdev(L_i)  # Standard deviation
-    ave_L = sum(L_i) / len(L_i)    # Mean
-    range_PR = 3                   # Setting boundary bounds
     
     for i in range(n):
-        if sigma == 0:
-            psuedo_PR = 0
-        else:
-            psuedo_PR = (L_i[i] - ave_L) / sigma
-
-        # Clamp pseudo_PR to bounds [-3, 3]
-        if psuedo_PR >= range_PR: 
-            psuedo_PR = range_PR
-        elif psuedo_PR <= -range_PR: 
-            psuedo_PR = -range_PR
-            
-        pPR.append(psuedo_PR)
-            
-        # Calculate h value (Linear mapping: Ax+By+C = 0)
-        h_x0 = 0.5 - (psuedo_PR / range_PR) * 0.5
-        h_value = h_x0 * (1 - H * 0.9)  # Give some chances even when H=1
+        base_val = 1.0 - CR_i[i]
+        
+        # Calculate h value
+        h_value = base_val * (1 - H * 0.9)  
         h_i.append(h_value)
         
-        # Calculate g value (Linear mapping: Ax+By+C = 0)
-        g_x1 = 0.5 - (psuedo_PR / range_PR) * 0.5
-        g_value = g_x1 * G
+        # Calculate g value
+        g_value = base_val * G
         g_i.append(g_value)
         
     return h_i, g_i
 
-def level_next(L_i, S_i, distr, n, G, H, alpha):
+# 升官抽籤
+def level_next(L_i, S_i, distr, n, G, H, alpha, epsilon=0.0, quota=1):
     """
-    Determines the next level for all individuals based on their state and promotion odds.
+    改成競爭式升遷，並加入 monitoring parameter \epsilon。
     """
-    L_next = []
+    L_next = list(L_i)
+    CR_i = get_CR(L_i, n)
+    h, g = gh(n, G, H, CR_i)
     
-    # Fetch promotion probabilities
-    g_and_h = gh(n, G, H, L_i) 
-    h = g_and_h[0]  # Hierarchy-related promotion
-    g = g_and_h[1]  # Gini-related promotion
-    
+    weights = []
     for i in range(n):
-        # Determine base probability of promotion
         if len(distr) == 1: 
-            # All nodes are on the same level
             pp = 1 / n 
         else:
-            # Combination of g and h ($0 \le pp \le 1$)
             pp = alpha * g[i] + (1 - alpha) * h[i] 
+            
+        if S_i[i] == 'C':
+            weights.append(pp)
+        else:
+            weights.append(epsilon * pp)
+            
+    sum_w = sum(weights)
     
-        # Roll the die to decide promotion
-        if S_i[i] == 'C':  
-            r = random.random()
-            if r < pp:
-                L_next.append(L_i[i] + 1)  # C gets promoted
-            else:
-                L_next.append(L_i[i])      # C doesn't get promoted
-        else:  
-            # D never gets promoted
-            L_next.append(L_i[i]) 
+    if sum_w > 0:
+        probs = [w / sum_w for w in weights]
+        actual_quota = min(quota, n)
+        
+        # 如果候選人數不足（非零權重者 < quota），調整抽取數量
+        non_zero_count = sum(1 for p in probs if p > 0)
+        actual_quota = min(actual_quota, non_zero_count)
+        
+        if actual_quota > 0:
+            promoted_indices = np.random.choice(range(n), size=actual_quota, replace=False, p=probs)
+            for idx in promoted_indices:
+                L_next[idx] += 1
 
     return L_next
+
+# 眼紅模仿機制
+def strategy_update_fermi(S_i, income_i, beta=1.0):
+    """
+    改為個體層級更新 (individual level update)：
+    pairwise Fermi imitation，每個 agent 參考另一人的 \pi_i，加上 selection strength \beta。
+    """
+    n = len(S_i)
+    S_next = list(S_i)
+    
+    for i in range(n):
+        j = random.randint(0, n - 1)
+        prob = 1.0 / (1.0 + np.exp(-beta * (income_i[j] - income_i[i])))
+        if random.random() < prob:
+            S_next[i] = S_i[j]
+            
+    return S_next
+

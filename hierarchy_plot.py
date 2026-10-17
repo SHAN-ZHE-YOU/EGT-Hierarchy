@@ -66,7 +66,8 @@ def main():
         'aveCD': Plot_aveCD_heatmap,
         'aveStep': Plot_aveStep_heatmap,
         'aveLevels': Plot_aveLevels_heatmap,
-        'aveEntropy': Plot_aveEntropy_heatmap
+        'aveEntropy': Plot_aveEntropy_heatmap,
+        'H_traj': Plot_H_trajectory
     }
 
     # Determine which plots to generate based on user input
