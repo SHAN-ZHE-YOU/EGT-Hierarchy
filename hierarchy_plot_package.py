@@ -24,113 +24,63 @@ def Save_plot(fig, file_name, output_format):
         fig.savefig(f'{dir_name}/{file_name}.pdf', dpi=600, format='pdf')
 
 def Plot_aveCD_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_format):
-    x = np.array(c_set)
-    y = np.array(G_set)
-    X, Y = np.meshgrid(x, y)
-
-    # Create the original Z array with y-axis inverted
-    original_Z = []
-    for G in reversed(G_set):  # Reverse the order of G_set
-        z_row = []
-        for c in c_set:
-            name = 'n='+str(n)+',alpha='+str(alpha)+',ini_pC='+str(ini_pC)+',c/b='+str(round(c/b,4))+',G='+str(G)+',testnum='+str(test_num)
-            
-            z_row.append(data[name]['ave_CD_ratio'])
-        original_Z.append(z_row)
-
-    original_Z_array = np.array(original_Z)
-
-    n_square = 20# Reshape Z to an 8x8 grid
-    step_size = 10  # 201 / 10 is approximately 20
-    reshaped_Z = np.zeros((n_square, n_square))
-    for i in range(n_square):
-        for j in range(n_square):
-            # Calculate average of each 25x25 block
-            block = original_Z_array[i*step_size:(i+1)*step_size, j*step_size:(j+1)*step_size]
-            average = np.mean(block)
-            reshaped_Z[i, j] = average
+    Z = np.zeros((len(G_set), len(c_set)))
+    for i, G in enumerate(reversed(G_set)):
+        for j, c in enumerate(c_set):
+            # 統一使用 round(x, 11) 對齊 main.py 的 Key
+            name = f'n={n},alpha={alpha},ini_pC={ini_pC},c/b={round(c/b,11)},G={round(G,11)},testnum={test_num}'
+            Z[i, j] = data[name]['ave_CD_ratio'] if name in data else 0
 
     fig = plt.figure(figsize=(9, 7.5))
     ax = fig.add_subplot(111)
     plt.xlabel('c/b', fontsize=20)
     plt.ylabel('G', fontsize=20)
-    plt.xticks([0.25,0.5,0.75,1], fontsize=18)
-    plt.yticks([0,0.25,0.5,0.75,1], fontsize=18)
+    plt.xticks([0, 0.25, 0.5, 0.75, 1], fontsize=18)
+    plt.yticks([0, 0.25, 0.5, 0.75, 1], fontsize=18)
 
-    im = ax.imshow(reshaped_Z, interpolation='nearest', cmap=cm.jet, extent=[0,1,0,1], vmin=0.0, vmax=0.55)
-    cbar = fig.colorbar(im, ticks=[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    im = ax.imshow(Z, interpolation='nearest', cmap=cm.jet, extent=[0,1,0,1], vmin=0.0, vmax=1.0)
+    cbar = fig.colorbar(im)
     cbar.ax.tick_params(labelsize=16)
 
     Save_plot(fig, f'n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_CD_heatmap', output_format)
 
 def Plot_aveStep_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_format):
-    x = np.array(c_set)
-    y = np.array(G_set)
-    X, Y = np.meshgrid(x, y)
-
-    # Create the original Z array with y-axis inverted
-    original_Z = []
-    for G in reversed(G_set):  # Reverse the order of G_set
-        z_row = []
-        for c in c_set:
-            name = 'n='+str(n)+',alpha='+str(alpha)+',ini_pC='+str(ini_pC)+',c/b='+str(round(c/b,4))+',G='+str(G)+',testnum='+str(test_num)
-            z_row.append(np.log(data[name]['ave_step']))
-        original_Z.append(z_row)
-
-    original_Z_array = np.array(original_Z)
-
-    n_square = 20  # Reshape Z to a 20x20 grid
-    step_size = 10  # 201 / 20 is approximately 10
-    reshaped_Z = np.zeros((n_square, n_square))
-    for i in range(n_square):
-        for j in range(n_square):
-            # Calculate average of each 10x10 block
-            block = original_Z_array[i*step_size:(i+1)*step_size, j*step_size:(j+1)*step_size]
-            average = np.mean(block)
-            reshaped_Z[i, j] = average
+    Z = np.zeros((len(G_set), len(c_set)))
+    for i, G in enumerate(reversed(G_set)):
+        for j, c in enumerate(c_set):
+            name = f'n={n},alpha={alpha},ini_pC={ini_pC},c/b={round(c/b,11)},G={round(G,11)},testnum={test_num}'
+            # 取 ln()，500步的上限大約是 6.2
+            Z[i, j] = np.log(data[name]['ave_step']) if name in data else 0
 
     fig = plt.figure(figsize=(9, 7.5))
     ax = fig.add_subplot(111)
     plt.xlabel('c/b', fontsize=20)
     plt.ylabel('G', fontsize=20)
-    plt.xticks([0.25,0.5,0.75,1], fontsize=18)
-    plt.yticks([0,0.25,0.5,0.75,1], fontsize=18)
+    plt.xticks([0, 0.25, 0.5, 0.75, 1], fontsize=18)
+    plt.yticks([0, 0.25, 0.5, 0.75, 1], fontsize=18)
 
-    im = ax.imshow(reshaped_Z, interpolation='nearest', cmap=cm.jet, extent=[0,1,0,1], vmin=0.0, vmax=3.5)
-    cbar = fig.colorbar(im, ticks=[0, 1, 2, 3])
+    im = ax.imshow(Z, interpolation='nearest', cmap=cm.jet, extent=[0,1,0,1], vmin=0.0, vmax=6.5)
+    cbar = fig.colorbar(im)
     cbar.ax.tick_params(labelsize=16)
 
     Save_plot(fig, f'n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_Step_heatmap', output_format)
 
 def Plot_aveLevels_heatmap(n, alpha, ini_pC, b, c_set, G_set, test_num, data, output_format):
-    x = np.array(c_set)
-    y = np.array(G_set)
-    original_Z = []
-    for G in reversed(G_set):
-        z_row = []
-        for c in c_set:
-            name = 'n='+str(n)+',alpha='+str(alpha)+',ini_pC='+str(ini_pC)+',c/b='+str(round(c/b,4))+',G='+str(G)+',testnum='+str(test_num)
-            z_row.append(data[name]['ave_num_levels'])
-        original_Z.append(z_row)
-
-    original_Z_array = np.array(original_Z)
-    reshaped_Z = np.zeros((20, 20))
-    step_size = 10
-    for i in range(20):
-        for j in range(20):
-            block = original_Z_array[i*step_size:(i+1)*step_size, j*step_size:(j+1)*step_size]
-            average = np.mean(block)
-            reshaped_Z[i, j] = average
+    Z = np.zeros((len(G_set), len(c_set)))
+    for i, G in enumerate(reversed(G_set)):
+        for j, c in enumerate(c_set):
+            name = f'n={n},alpha={alpha},ini_pC={ini_pC},c/b={round(c/b,11)},G={round(G,11)},testnum={test_num}'
+            Z[i, j] = data[name]['ave_num_levels'] if name in data else 1
 
     fig = plt.figure(figsize=(9, 7.5))
     ax = fig.add_subplot(111)
     plt.xlabel('c/b', fontsize=20)
     plt.ylabel('G', fontsize=20)
-    plt.xticks([0.25,0.5,0.75,1], fontsize=18)
-    plt.yticks([0,0.25,0.5,0.75,1], fontsize=18)
+    plt.xticks([0, 0.25, 0.5, 0.75, 1], fontsize=18)
+    plt.yticks([0, 0.25, 0.5, 0.75, 1], fontsize=18)
     
-    im = ax.imshow(reshaped_Z, interpolation='nearest', cmap=cm.jet, extent=[0,1,0,1], vmin=1.9, vmax=4)
-    cbar = fig.colorbar(im, ticks=[2, 2.5, 3, 3.5, 4])
+    im = ax.imshow(Z, interpolation='nearest', cmap=cm.jet, extent=[0,1,0,1], vmin=1.0, vmax=4.0)
+    cbar = fig.colorbar(im)
     cbar.ax.tick_params(labelsize=16)
 
     Save_plot(fig, f'n={n}_alpha={alpha}_inipC={ini_pC}_testnum={test_num}_average_num_levels_heatmap', output_format)
